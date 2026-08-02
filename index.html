@@ -5,7 +5,6 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Kindle Stock Dashboard</title>
   <style>
-    /* 專為 Kindle E-Ink 電子紙設計的高對比排版 */
     * { box-sizing: border-box; margin: 0; padding: 0; }
     body {
       font-family: sans-serif;
@@ -39,15 +38,8 @@
       align-items: baseline;
     }
 
-    .symbol {
-      font-size: 26px;
-      font-weight: bold;
-    }
-
-    .price {
-      font-size: 38px;
-      font-weight: bold;
-    }
+    .symbol { font-size: 26px; font-weight: bold; }
+    .price { font-size: 38px; font-weight: bold; }
 
     .stock-sub {
       display: flex;
@@ -56,11 +48,7 @@
       font-size: 18px;
     }
 
-    .loading {
-      text-align: center;
-      font-size: 22px;
-      margin-top: 50px;
-    }
+    .loading { text-align: center; font-size: 22px; margin-top: 50px; }
   </style>
 </head>
 <body>
@@ -71,70 +59,46 @@
   </div>
 
   <div id="dashboard-content">
-    <div class="loading">📊 正在載入最新股價數據...</div>
+    <div class="loading">📊 正在載入最新股價...</div>
   </div>
 
   <script>
-    // 預設顯示的股票代號（台股使用純數字或 2330.TW 均可相容）
     const DEFAULT_STOCKS = ["2330.TW", "2454.TW", "NVDA"];
 
     function getStockListFromURL() {
       const params = new URLSearchParams(window.location.search);
       const stocksParam = params.get('stocks');
-      if (stocksParam) {
-        return stocksParam.split(',').map(s => s.trim());
-      }
-      return DEFAULT_STOCKS;
+      return stocksParam ? stocksParam.split(',').map(s => s.trim()) : DEFAULT_STOCKS;
     }
 
-    // 格式化股票代號 (將 2330.TW 轉為相容格式)
-    function cleanSymbol(symbol) {
-      return symbol.toUpperCase().replace('.TW', '').replace('.TWO', '');
-    }
-
-    async function fetchSingleStock(rawSymbol) {
-      const symbol = cleanSymbol(rawSymbol);
-      
-      // 方案 A：使用穩定的公開財經 CORS 代理代理 API
-      const targetUrl = `https://query1.finance.yahoo.com/v8/finance/chart/${rawSymbol}?interval=1m&range=1d`;
-      const proxyUrl = `https://api.allorigins.win/get?url=${encodeURIComponent(targetUrl)}`;
-
+    async function fetchStockFromBackend(symbol) {
       try {
-        const response = await fetch(proxyUrl);
-        if (!response.ok) throw new Error('網路回應錯誤');
-        const proxyData = await response.json();
-        const data = JSON.parse(proxyData.contents);
-        
-        const meta = data.chart.result[0].meta;
-        const currentPrice = meta.regularMarketPrice.toFixed(2);
-        const previousClose = meta.chartPreviousClose.toFixed(2);
-        const change = (currentPrice - previousClose).toFixed(2);
-        const changePercent = ((change / previousClose) * 100).toFixed(2);
-        const isPositive = change >= 0;
+        // 關鍵：呼叫我們自己寫的 Vercel 後端 API
+        const response = await fetch(`/api/stock?symbol=${symbol}`);
+        if (!response.ok) throw new Error('後端回應錯誤');
+        const data = await response.json();
+
+        const isPositive = parseFloat(data.change) >= 0;
         const arrow = isPositive ? "▲ +" : "▼ ";
 
         return `
           <div class="stock-card">
             <div class="stock-main">
-              <span class="symbol">${symbol}</span>
-              <span class="price">${currentPrice}</span>
+              <span class="symbol">${data.symbol}</span>
+              <span class="price">${data.price}</span>
             </div>
             <div class="stock-sub">
-              <span>昨收: ${previousClose}</span>
-              <span>${arrow}${change} (${changePercent}%)</span>
+              <span>昨收: ${data.previousClose}</span>
+              <span>${arrow}${data.change} (${data.changePercent}%)</span>
             </div>
           </div>
         `;
       } catch (err) {
-        console.error(`抓取 ${rawSymbol} 失敗:`, err);
         return `
           <div class="stock-card">
             <div class="stock-main">
               <span class="symbol">${symbol}</span>
-              <span class="price" style="font-size:24px;">休市/讀取中</span>
-            </div>
-            <div class="stock-sub">
-              <span>請稍後重試</span>
+              <span class="price" style="font-size:24px;">連線異常</span>
             </div>
           </div>
         `;
@@ -145,22 +109,14 @@
       const symbols = getStockListFromURL();
       const container = document.getElementById('dashboard-content');
       
-      // 同步抓取所有股票
-      const cards = await Promise.all(symbols.map(s => fetchSingleStock(s)));
+      const cards = await Promise.all(symbols.map(s => fetchStockFromBackend(s)));
       container.innerHTML = cards.join('');
       
-      updateHeaderStatus();
-    }
-
-    function updateHeaderStatus() {
       const now = new Date();
-      const timeStr = now.getHours().toString().padStart(2, '0') + ':' + 
-                      now.getMinutes().toString().padStart(2, '0');
-      document.getElementById('last-update').innerText = timeStr;
-      document.getElementById('net-status').innerText = navigator.onLine ? "🟢 已連線" : "🔴 斷線";
+      document.getElementById('last-update').innerText = 
+        now.getHours().toString().padStart(2, '0') + ':' + now.getMinutes().toString().padStart(2, '0');
     }
 
-    // 初始化與 3 分鐘自動刷新
     window.onload = () => {
       loadAllStocks();
       setInterval(loadAllStocks, 3 * 60 * 1000);
