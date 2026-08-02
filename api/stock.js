@@ -146,6 +146,9 @@ export default async function handler(req, res) {
       })).filter(item => item.price !== null);
     }
 
+    const dayHigh = meta.regularMarketDayHigh ? meta.regularMarketDayHigh.toFixed(2) : '--';
+    const dayLow = meta.regularMarketDayLow ? meta.regularMarketDayLow.toFixed(2) : '--';
+
     return res.status(200).json({
       symbol: displayName,
       rawSymbol: symbol,
@@ -154,6 +157,8 @@ export default async function handler(req, res) {
       previousClose: prevStr,
       change: changeStr,
       changePercent: changePercentStr,
+      dayHigh: dayHigh,
+      dayLow: dayLow,
       extendedMarket: extendedMarket,
       chart: chartData
     });

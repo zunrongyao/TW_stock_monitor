@@ -473,6 +473,11 @@
         const stockName = (data.name && data.name !== data.symbol) ? data.name : '';
         const titleText = stockName ? `${stockCode} ${stockName}` : stockCode;
 
+        let rangeHtml = '';
+        if (data.dayHigh && data.dayHigh !== '--' && data.dayLow && data.dayLow !== '--') {
+          rangeHtml = `<span style="font-size: 13px; font-weight: normal; margin-right: 8px;">高:${data.dayHigh} 低:${data.dayLow}</span>`;
+        }
+
         let extHtml = '';
         if (data.extendedMarket) {
           extHtml = `<span style="font-size: 13px; font-weight: normal; margin-right: 8px;">${data.extendedMarket.label}: ${data.extendedMarket.price} (${data.extendedMarket.changePercent})</span>`;
@@ -485,7 +490,7 @@
               <span class="price">${data.price}</span>
             </div>
             <div class="stock-sub">
-              ${extHtml}
+              ${rangeHtml}${extHtml}
               <span>${arrow}${data.change} (${data.changePercent}%)</span>
             </div>
           </div>
