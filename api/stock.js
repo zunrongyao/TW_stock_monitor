@@ -92,13 +92,30 @@ export default async function handler(req, res) {
 
     const stockName = await getStockChineseName(symbol, meta);
 
+    // Extract intraday series (prices & timestamps)
+    let chartData = [];
+    if (result.timestamp && result.indicators && result.indicators.quote[0]) {
+      const timestamps = result.timestamp;
+      const quotes = result.indicators.quote[0].close || [];
+      const high = meta.regularMarketDayHigh || Math.max(...quotes.filter(Boolean));
+      const low = meta.regularMarketDayLow || Math.min(...quotes.filter(Boolean));
+      const open = meta.regularMarketOpen || quotes.find(Boolean);
+
+      chartData = timestamps.map((t, idx) => ({
+        time: new Date(t * 1000).toLocaleTimeString('zh-TW', { hour: '2-digit', minute: '2-digit', hour12: false }),
+        price: quotes[idx] !== null && quotes[idx] !== undefined ? parseFloat(quotes[idx].toFixed(2)) : null
+      })).filter(item => item.price !== null);
+    }
+
     return res.status(200).json({
       symbol: displayName,
+      rawSymbol: symbol,
       name: stockName,
       price: priceStr,
       previousClose: prevStr,
       change: changeStr,
-      changePercent: changePercentStr
+      changePercent: changePercentStr,
+      chart: chartData
     });
 
   } catch (error) {
