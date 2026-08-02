@@ -1,3 +1,34 @@
+// Stock name lookup helper function
+async function getStockChineseName(symbol, meta) {
+  if (symbol === '^TWII') return '加權指數';
+  if (symbol === 'FITX.TWO' || symbol.toUpperCase() === 'WTXP&') return '臺指期';
+
+  const codeMatch = symbol.match(/^(\d{4,5})/);
+  const code = codeMatch ? codeMatch[1] : null;
+
+  if (code) {
+    // Attempt TWSE MIS real-time API first
+    try {
+      const prefix = symbol.endsWith('.TWO') ? 'otc' : 'tse';
+      const twseUrl = `https://mis.twse.com.tw/stock/api/getStockInfo.jsp?ex_ch=${prefix}_${code}.tw`;
+      const res = await fetch(twseUrl, {
+        headers: { 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64)' }
+      });
+      if (res.ok) {
+        const twseData = await res.json();
+        if (twseData.msgArray && twseData.msgArray[0] && twseData.msgArray[0].n) {
+          return twseData.msgArray[0].n;
+        }
+      }
+    } catch (e) {
+      console.warn('TWSE name lookup failed, using fallback:', e);
+    }
+  }
+
+  // Fallback to Yahoo meta if available and non-English/valid, or symbol
+  return meta?.shortName || meta?.longName || symbol;
+}
+
 export default async function handler(req, res) {
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'GET');
@@ -54,17 +85,16 @@ export default async function handler(req, res) {
       changePercentStr = ((diff / previousClose) * 100).toFixed(2);
     }
 
-    // Friendly display name
+    // Friendly display symbol & Chinese Name
     let displayName = symbol.toUpperCase();
     if (symbol === '^TWII') displayName = '加權指數';
     else if (symbol === 'FITX.TWO' || symbol.toUpperCase() === 'WTXP&') displayName = '臺指期';
 
-    // Chinese/Short name from Yahoo metadata if available
-    const name = meta.shortName || meta.longName || displayName;
+    const stockName = await getStockChineseName(symbol, meta);
 
     return res.status(200).json({
       symbol: displayName,
-      name: name,
+      name: stockName,
       price: priceStr,
       previousClose: prevStr,
       change: changeStr,
