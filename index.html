@@ -151,6 +151,36 @@
       cursor: not-allowed;
     }
 
+    /* Market Tabs Switcher */
+    .tab-bar {
+      display: flex;
+      margin-bottom: 8px;
+      border: 2px solid #000000;
+      border-radius: 6px;
+      overflow: hidden;
+    }
+
+    .tab-btn {
+      flex: 1;
+      padding: 6px 0;
+      font-size: 16px;
+      font-weight: bold;
+      background: #ffffff;
+      color: #000000;
+      border: none;
+      cursor: pointer;
+      text-align: center;
+    }
+
+    .tab-btn.active {
+      background: #000000;
+      color: #ffffff;
+    }
+
+    .tab-btn:first-child {
+      border-right: 2px solid #000000;
+    }
+
     /* Settings Modal */
     .modal-overlay {
       display: none;
@@ -159,6 +189,7 @@
       background: rgba(255, 255, 255, 0.95);
       z-index: 999;
       padding: 15px;
+      overflow-y: auto;
     }
 
     .modal-box {
@@ -218,14 +249,20 @@
     <button class="header-btn" onclick="openSettings()">⚙️ 設定 (Settings)</button>
   </div>
 
-  <!-- TAIEX & Futures Compact Banner -->
+  <!-- Market Tabs Switcher (TW / US) -->
+  <div class="tab-bar">
+    <button id="tab-tw" class="tab-btn active" onclick="switchMarket('TW')">🇹🇼 台股 (TW)</button>
+    <button id="tab-us" class="tab-btn" onclick="switchMarket('US')">🇺🇸 美股 (US)</button>
+  </div>
+
+  <!-- Indices Compact Banner (TW or US) -->
   <div class="indices-banner">
-    <div class="index-card" id="idx-taiex">
+    <div class="index-card" id="idx-1">
       <div class="index-name">加權指數 (TAIEX)</div>
       <div class="index-price">--.--</div>
       <div class="index-change">--</div>
     </div>
-    <div class="index-card" id="idx-wtxp">
+    <div class="index-card" id="idx-2">
       <div class="index-name">臺指期 (WTXP&)</div>
       <div class="index-price">--.--</div>
       <div class="index-change">--</div>
@@ -240,15 +277,22 @@
   <!-- Settings Modal Dialog -->
   <div id="settings-modal" class="modal-overlay">
     <div class="modal-box">
-      <div class="modal-title">⚙️ 台股自選清單設定</div>
+      <div class="modal-title">⚙️ 自選清單設定</div>
       
+      <div style="font-weight:bold; font-size:17px; margin-bottom:4px; text-decoration:underline;">🇹🇼 台股清單</div>
       <label class="modal-label">上市股票 (代號逗號分隔，免輸入.TW)：</label>
       <input type="text" id="tw-stocks-input" class="modal-input" placeholder="例如: 2330, 2317, 2454">
       
       <label class="modal-label">上櫃股票 (代號逗號分隔，免輸入.TWO)：</label>
       <input type="text" id="two-stocks-input" class="modal-input" placeholder="例如: 8069, 3293">
 
-      <p style="font-size: 12px; color: #555; margin-top: 4px;">直接輸入數字代號即可，系統將自動套用市場分類。</p>
+      <hr style="margin: 12px 0; border: 1px solid #000;">
+
+      <div style="font-weight:bold; font-size:17px; margin-bottom:4px; text-decoration:underline;">🇺🇸 美股清單</div>
+      <label class="modal-label">美股代號 (代號逗號分隔)：</label>
+      <input type="text" id="us-stocks-input" class="modal-input" placeholder="例如: AAPL, NVDA, TSLA, MSFT, GOOGL">
+
+      <p style="font-size: 12px; color: #555; margin-top: 4px;">儲存後可在頂部切換台股/美股頁籤。</p>
       
       <div class="modal-actions">
         <button class="btn btn-cancel" onclick="closeSettings()">取消</button>
@@ -258,26 +302,43 @@
   </div>
 
   <script>
-    // Default TW stocks ONLY
-    const DEFAULT_STOCKS = ["2330.TW", "2317.TW", "2454.TW"];
+    // Current Market Tab ('TW' or 'US')
+    let currentMarket = 'TW';
 
-    function getStockList() {
-      const params = new URLSearchParams(window.location.search);
-      const urlStocks = params.get('stocks');
-      if (urlStocks) return urlStocks.split(',').map(s => s.trim()).filter(Boolean);
+    // Defaults
+    const DEFAULT_TW_STOCKS = ["2330.TW", "2317.TW", "2454.TW"];
+    const DEFAULT_US_STOCKS = ["AAPL", "NVDA", "TSLA", "MSFT", "GOOGL"];
 
-      const savedStocks = localStorage.getItem('kindle_stock_list');
-      if (savedStocks) return savedStocks.split(',').map(s => s.trim()).filter(Boolean);
+    function getStockList(market = currentMarket) {
+      if (market === 'US') {
+        const savedUS = localStorage.getItem('kindle_us_stock_list');
+        if (savedUS) return savedUS.split(',').map(s => s.trim().toUpperCase()).filter(Boolean);
+        return DEFAULT_US_STOCKS;
+      } else {
+        const savedTW = localStorage.getItem('kindle_stock_list');
+        if (savedTW) return savedTW.split(',').map(s => s.trim()).filter(Boolean);
+        return DEFAULT_TW_STOCKS;
+      }
+    }
 
-      return DEFAULT_STOCKS;
+    function switchMarket(market) {
+      if (currentMarket === market) return;
+      currentMarket = market;
+      currentPage = 1;
+
+      document.getElementById('tab-tw').classList.toggle('active', market === 'TW');
+      document.getElementById('tab-us').classList.toggle('active', market === 'US');
+
+      loadAllData();
     }
 
     function openSettings() {
-      const list = getStockList();
+      // Load TW
+      const twFullList = getStockList('TW');
       const twList = [];
       const twoList = [];
 
-      list.forEach(item => {
+      twFullList.forEach(item => {
         if (item.endsWith('.TWO')) {
           twoList.push(item.replace('.TWO', ''));
         } else {
@@ -287,6 +348,11 @@
 
       document.getElementById('tw-stocks-input').value = twList.join(', ');
       document.getElementById('two-stocks-input').value = twoList.join(', ');
+
+      // Load US
+      const usList = getStockList('US');
+      document.getElementById('us-stocks-input').value = usList.join(', ');
+
       document.getElementById('settings-modal').style.display = 'block';
     }
 
@@ -295,19 +361,25 @@
     }
 
     function saveSettings() {
+      // TW save
       const twInput = document.getElementById('tw-stocks-input').value;
       const twoInput = document.getElementById('two-stocks-input').value;
-
       const twItems = twInput.split(',').map(s => s.trim()).filter(Boolean).map(code => code.includes('.') ? code : `${code}.TW`);
       const twoItems = twoInput.split(',').map(s => s.trim()).filter(Boolean).map(code => code.includes('.') ? code : `${code}.TWO`);
-
-      const fullList = [...twItems, ...twoItems];
-
-      if (fullList.length > 0) {
-        localStorage.setItem('kindle_stock_list', fullList.join(', '));
-        closeSettings();
-        loadAllData();
+      const fullTwList = [...twItems, ...twoItems];
+      if (fullTwList.length > 0) {
+        localStorage.setItem('kindle_stock_list', fullTwList.join(', '));
       }
+
+      // US save
+      const usInput = document.getElementById('us-stocks-input').value;
+      const usItems = usInput.split(',').map(s => s.trim().toUpperCase()).filter(Boolean);
+      if (usItems.length > 0) {
+        localStorage.setItem('kindle_us_stock_list', usItems.join(', '));
+      }
+
+      closeSettings();
+      loadAllData();
     }
 
     // Helper to fetch single symbol data
@@ -321,20 +393,34 @@
       }
     }
 
-    // Load Top Indices (TAIEX & WTXP&)
+    // Load Top Indices based on current market
     async function loadIndices() {
-      const [taiex, wtxp] = await Promise.all([
-        fetchSymbol('^TWII'),
-        fetchSymbol('FITX.TWO')
+      let firstSymbol = '^TWII';
+      let secondSymbol = 'FITX.TWO';
+      let firstName = '加權指數 (TAIEX)';
+      let secondName = '臺指期 (WTXP&)';
+
+      if (currentMarket === 'US') {
+        firstSymbol = '^GSPC';
+        secondSymbol = '^IXIC';
+        firstName = '標普 500 (S&P 500)';
+        secondName = '納斯達克 (Nasdaq)';
+      }
+
+      const [firstData, secondData] = await Promise.all([
+        fetchSymbol(firstSymbol),
+        fetchSymbol(secondSymbol)
       ]);
 
-      updateIndexUI('idx-taiex', '加權指數', taiex);
-      updateIndexUI('idx-wtxp', '臺指期', wtxp);
+      updateIndexUI('idx-1', firstName, firstData);
+      updateIndexUI('idx-2', secondName, secondData);
     }
 
     function updateIndexUI(elementId, label, data) {
       const card = document.getElementById(elementId);
       if (!card) return;
+
+      card.querySelector('.index-name').innerText = label;
 
       if (data && data.price !== '--') {
         const isPositive = parseFloat(data.change) >= 0;
