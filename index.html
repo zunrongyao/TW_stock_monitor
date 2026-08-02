@@ -105,7 +105,51 @@
       font-weight: bold;
     }
 
-    .loading { text-align: center; font-size: 22px; margin-top: 40px; }
+    /* Pagination Bar */
+    .pagination-bar {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-top: 8px;
+      padding: 6px 0;
+    }
+
+    .page-numbers {
+      display: flex;
+      gap: 6px;
+    }
+
+    .page-btn {
+      background: #ffffff;
+      color: #000000;
+      border: 2px solid #000000;
+      border-radius: 4px;
+      padding: 4px 10px;
+      font-size: 16px;
+      font-weight: bold;
+      cursor: pointer;
+    }
+
+    .page-btn.active {
+      background: #000000;
+      color: #ffffff;
+    }
+
+    .page-nav-btn {
+      background: #ffffff;
+      color: #000000;
+      border: 2px solid #000000;
+      border-radius: 4px;
+      padding: 4px 12px;
+      font-size: 15px;
+      font-weight: bold;
+      cursor: pointer;
+    }
+
+    .page-nav-btn:disabled {
+      opacity: 0.3;
+      cursor: not-allowed;
+    }
 
     /* Settings Modal */
     .modal-overlay {
@@ -303,12 +347,23 @@
       }
     }
 
+    // Pagination State
+    let currentPage = 1;
+    const PAGE_SIZE = 7;
+
     // Load Individual Watchlist
     async function loadStockCards() {
       const symbols = getStockList();
       const container = document.getElementById('dashboard-content');
-      
-      const cards = await Promise.all(symbols.map(async (symbol) => {
+      const totalPages = Math.ceil(symbols.length / PAGE_SIZE) || 1;
+
+      if (currentPage > totalPages) currentPage = totalPages;
+      if (currentPage < 1) currentPage = 1;
+
+      const startIndex = (currentPage - 1) * PAGE_SIZE;
+      const pageSymbols = symbols.slice(startIndex, startIndex + PAGE_SIZE);
+
+      const cards = await Promise.all(pageSymbols.map(async (symbol) => {
         const data = await fetchSymbol(symbol);
         const stockCode = symbol.replace('.TW','').replace('.TWO','');
         
@@ -341,7 +396,33 @@
         `;
       }));
 
-      container.innerHTML = cards.join('');
+      // Pagination Controls HTML
+      let paginationHtml = '';
+      if (totalPages > 1) {
+        let pageBtns = '';
+        for (let i = 1; i <= totalPages; i++) {
+          const activeClass = i === currentPage ? 'active' : '';
+          pageBtns += `<button class="page-btn ${activeClass}" onclick="changePage(${i})">${i}</button>`;
+        }
+
+        const prevDisabled = currentPage === 1 ? 'disabled' : '';
+        const nextDisabled = currentPage === totalPages ? 'disabled' : '';
+
+        paginationHtml = `
+          <div class="pagination-bar">
+            <button class="page-nav-btn" ${prevDisabled} onclick="changePage(${currentPage - 1})">◀ 上頁</button>
+            <div class="page-numbers">${pageBtns}</div>
+            <button class="page-nav-btn" ${nextDisabled} onclick="changePage(${currentPage + 1})">下頁 ▶</button>
+          </div>
+        `;
+      }
+
+      container.innerHTML = cards.join('') + paginationHtml;
+    }
+
+    function changePage(page) {
+      currentPage = page;
+      loadStockCards();
     }
 
     // Detail Modal for Today's Trend Chart
