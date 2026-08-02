@@ -16,18 +16,16 @@
     }
 
     body {
-      padding: 12px;
+      padding: 10px;
     }
     
-    /* Top Header */
-    .header {
+    /* Top Bar: Time + Settings */
+    .header-bar {
       display: flex;
       justify-content: space-between;
       align-items: center;
-      border-bottom: 4px solid #000000;
-      padding-bottom: 8px;
-      margin-bottom: 12px;
-      font-size: 18px;
+      margin-bottom: 6px;
+      font-size: 15px;
       font-weight: bold;
     }
 
@@ -35,19 +33,58 @@
       background: #000000;
       color: #ffffff;
       border: none;
-      padding: 4px 10px;
-      font-size: 16px;
+      padding: 3px 8px;
+      font-size: 14px;
       font-weight: bold;
       cursor: pointer;
       border-radius: 4px;
     }
 
-    /* Stock Card Styles */
+    /* Market Indices Banner (TAIEX & WTXP&) */
+    .indices-banner {
+      display: flex;
+      justify-content: space-between;
+      gap: 6px;
+      border-top: 3px solid #000;
+      border-bottom: 3px solid #000;
+      padding: 6px 0;
+      margin-bottom: 12px;
+      background: #f8f8f8;
+    }
+
+    .index-card {
+      flex: 1;
+      text-align: center;
+      border-right: 1px solid #000;
+      padding: 2px 4px;
+    }
+
+    .index-card:last-child {
+      border-right: none;
+    }
+
+    .index-name {
+      font-size: 13px;
+      font-weight: bold;
+      margin-bottom: 2px;
+    }
+
+    .index-price {
+      font-size: 18px;
+      font-weight: bold;
+    }
+
+    .index-change {
+      font-size: 12px;
+      font-weight: bold;
+    }
+
+    /* Individual Stock Cards */
     .stock-card {
       border: 3px solid #000000;
       border-radius: 8px;
       padding: 12px 15px;
-      margin-bottom: 12px;
+      margin-bottom: 10px;
       background: #ffffff;
     }
 
@@ -57,27 +94,27 @@
       align-items: center;
     }
 
-    .symbol { font-size: 30px; font-weight: bold; }
-    .price { font-size: 42px; font-weight: bold; }
+    .symbol { font-size: 28px; font-weight: bold; }
+    .price { font-size: 40px; font-weight: bold; }
 
     .stock-sub {
       display: flex;
       justify-content: space-between;
-      margin-top: 6px;
-      font-size: 20px;
+      margin-top: 4px;
+      font-size: 18px;
       font-weight: bold;
     }
 
-    .loading { text-align: center; font-size: 24px; margin-top: 50px; }
+    .loading { text-align: center; font-size: 22px; margin-top: 40px; }
 
-    /* Settings Modal Dialog (Kindle Optimized) */
+    /* Settings Modal */
     .modal-overlay {
       display: none;
       position: fixed;
       top: 0; left: 0; width: 100%; height: 100%;
       background: rgba(255, 255, 255, 0.95);
       z-index: 999;
-      padding: 20px;
+      padding: 15px;
     }
 
     .modal-box {
@@ -88,7 +125,7 @@
     }
 
     .modal-title {
-      font-size: 24px;
+      font-size: 22px;
       font-weight: bold;
       margin-bottom: 10px;
       border-bottom: 2px solid #000;
@@ -98,7 +135,7 @@
     .modal-input {
       width: 100%;
       padding: 10px;
-      font-size: 20px;
+      font-size: 18px;
       border: 2px solid #000;
       margin: 10px 0;
       font-weight: bold;
@@ -111,10 +148,10 @@
     }
 
     .btn {
-      padding: 10px 20px;
-      font-size: 18px;
+      padding: 8px 16px;
+      font-size: 16px;
       font-weight: bold;
-      border: 3px solid #000;
+      border: 2px solid #000;
       cursor: pointer;
     }
 
@@ -124,24 +161,38 @@
 </head>
 <body>
 
-  <!-- Top Header Bar -->
-  <div class="header">
-    <span>更新: <span id="last-update">--:--</span></span>
+  <!-- Top Bar -->
+  <div class="header-bar">
+    <span>更新時間: <span id="last-update">--:--</span></span>
     <button class="header-btn" onclick="openSettings()">⚙️ 設定 (Settings)</button>
   </div>
 
-  <!-- Stock Container -->
+  <!-- TAIEX & Futures Compact Banner -->
+  <div class="indices-banner">
+    <div class="index-card" id="idx-taiex">
+      <div class="index-name">加權指數 (TAIEX)</div>
+      <div class="index-price">--.--</div>
+      <div class="index-change">--</div>
+    </div>
+    <div class="index-card" id="idx-wtxp">
+      <div class="index-name">臺指期 (WTXP&)</div>
+      <div class="index-price">--.--</div>
+      <div class="index-change">--</div>
+    </div>
+  </div>
+
+  <!-- Individual Stock Watch List -->
   <div id="dashboard-content">
     <div class="loading">📊 載入中...</div>
   </div>
 
-  <!-- Settings Modal Overlay -->
+  <!-- Settings Modal Dialog -->
   <div id="settings-modal" class="modal-overlay">
     <div class="modal-box">
-      <div class="modal-title">⚙️ 股票清單設定</div>
-      <p style="font-size: 16px; margin-bottom: 5px;">請輸入股票代號（用逗號 `,` 分隔）：</p>
-      <input type="text" id="stocks-input" class="modal-input" placeholder="例如: 2330.TW, 2317.TW, NVDA">
-      <p style="font-size: 14px; color: #333;">台股上市加 `.TW`，上櫃加 `.TWO`，美股直接填代號。</p>
+      <div class="modal-title">⚙️ 台股自選清單設定</div>
+      <p style="font-size: 15px;">請輸入個股代號（用逗號 `,` 分隔）：</p>
+      <input type="text" id="stocks-input" class="modal-input" placeholder="例如: 2330.TW, 2317.TW, 2454.TW">
+      <p style="font-size: 13px; color: #333;">上市加 `.TW` (如 2330.TW)，上櫃加 `.TWO` (如 8069.TWO)。</p>
       
       <div class="modal-actions">
         <button class="btn btn-cancel" onclick="closeSettings()">取消</button>
@@ -151,9 +202,9 @@
   </div>
 
   <script>
-    const DEFAULT_STOCKS = ["2330.TW", "2454.TW", "NVDA"];
+    // Default TW stocks ONLY (No US stocks)
+    const DEFAULT_STOCKS = ["2330.TW", "2317.TW", "2454.TW"];
 
-    // Get active stock list: Priority: URL parameter -> LocalStorage -> Default List
     function getStockList() {
       const params = new URLSearchParams(window.location.search);
       const urlStocks = params.get('stocks');
@@ -165,10 +216,8 @@
       return DEFAULT_STOCKS;
     }
 
-    // Modal UI Controls
     function openSettings() {
-      const currentList = getStockList().join(', ');
-      document.getElementById('stocks-input').value = currentList;
+      document.getElementById('stocks-input').value = getStockList().join(', ');
       document.getElementById('settings-modal').style.display = 'block';
     }
 
@@ -181,16 +230,64 @@
       if (inputValue.trim()) {
         localStorage.setItem('kindle_stock_list', inputValue.trim());
         closeSettings();
-        loadAllStocks(); // Refresh immediately
+        loadAllData();
       }
     }
 
-    // Fetch Stock Data from Vercel Backend
-    async function fetchStockFromBackend(symbol) {
+    // Helper to fetch single symbol data
+    async function fetchSymbol(symbol) {
       try {
-        const response = await fetch(`/api/stock?symbol=${symbol}`);
-        if (!response.ok) throw new Error('API Error');
-        const data = await response.json();
+        const response = await fetch(`/api/stock?symbol=${encodeURIComponent(symbol)}`);
+        if (!response.ok) return null;
+        return await response.json();
+      } catch (e) {
+        return null;
+      }
+    }
+
+    // Load Top Indices (TAIEX & WTXP&)
+    async function loadIndices() {
+      const [taiex, wtxp] = await Promise.all([
+        fetchSymbol('^TWII'),
+        fetchSymbol('FITX.TWO')
+      ]);
+
+      updateIndexUI('idx-taiex', '加權指數', taiex);
+      updateIndexUI('idx-wtxp', '臺指期', wtxp);
+    }
+
+    function updateIndexUI(elementId, label, data) {
+      const card = document.getElementById(elementId);
+      if (!card) return;
+
+      if (data && data.price !== '--') {
+        const isPositive = parseFloat(data.change) >= 0;
+        const arrow = isPositive ? "▲ +" : "▼ ";
+        card.querySelector('.index-price').innerText = data.price;
+        card.querySelector('.index-change').innerText = `${arrow}${data.change} (${data.changePercent}%)`;
+      } else {
+        card.querySelector('.index-price').innerText = '--.--';
+        card.querySelector('.index-change').innerText = '休市/更新中';
+      }
+    }
+
+    // Load Individual Watchlist
+    async function loadStockCards() {
+      const symbols = getStockList();
+      const container = document.getElementById('dashboard-content');
+      
+      const cards = await Promise.all(symbols.map(async (symbol) => {
+        const data = await fetchSymbol(symbol);
+        if (!data || data.price === '--') {
+          return `
+            <div class="stock-card">
+              <div class="stock-main">
+                <span class="symbol">${symbol.replace('.TW','').replace('.TWO','')}</span>
+                <span class="price" style="font-size:24px;">休市 / 無資料</span>
+              </div>
+            </div>
+          `;
+        }
 
         const isPositive = parseFloat(data.change) >= 0;
         const arrow = isPositive ? "▲ +" : "▼ ";
@@ -198,7 +295,7 @@
         return `
           <div class="stock-card">
             <div class="stock-main">
-              <span class="symbol">${data.symbol}</span>
+              <span class="symbol">${data.symbol.replace('.TW','').replace('.TWO','')}</span>
               <span class="price">${data.price}</span>
             </div>
             <div class="stock-sub">
@@ -207,24 +304,13 @@
             </div>
           </div>
         `;
-      } catch (err) {
-        return `
-          <div class="stock-card">
-            <div class="stock-main">
-              <span class="symbol">${symbol}</span>
-              <span class="price" style="font-size:24px;">連線異常</span>
-            </div>
-          </div>
-        `;
-      }
+      }));
+
+      container.innerHTML = cards.join('');
     }
 
-    async function loadAllStocks() {
-      const symbols = getStockList();
-      const container = document.getElementById('dashboard-content');
-      
-      const cards = await Promise.all(symbols.map(s => fetchStockFromBackend(s)));
-      container.innerHTML = cards.join('');
+    async function loadAllData() {
+      await Promise.all([loadIndices(), loadStockCards()]);
       
       const now = new Date();
       document.getElementById('last-update').innerText = 
@@ -232,8 +318,8 @@
     }
 
     window.onload = () => {
-      loadAllStocks();
-      setInterval(loadAllStocks, 3 * 60 * 1000); // Refresh every 3 minutes
+      loadAllData();
+      setInterval(loadAllData, 3 * 60 * 1000); // 3-min auto refresh
     };
   </script>
 </body>
