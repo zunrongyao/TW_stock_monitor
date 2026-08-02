@@ -62,7 +62,28 @@
     <div class="loading">📊 正在載入最新股價...</div>
   </div>
 
-  <script>
+<script>
+    // ==========================================
+    // 💡 1. Kindle 專用：自動隱藏頂部工具列與全螢幕邏輯
+    // ==========================================
+    window.addEventListener('load', function() {
+      setTimeout(function() {
+        window.scrollTo(0, 1); // 載入 1 秒後自動往下微幅捲動，觸發 Kindle 隱藏網址列
+      }, 1000);
+    });
+
+    // 點擊畫面任意處時，嘗試切換為滿版全螢幕
+    document.addEventListener('click', function() {
+      var docEl = document.documentElement;
+      var req = docEl.requestFullscreen || docEl.webkitRequestFullScreen || docEl.mozRequestHtml5Fullscreen || docEl.msRequestFullscreen;
+      if (req) {
+        req.call(docEl);
+      }
+    });
+
+    // ==========================================
+    // 📊 2. 股票 Dashboard 主邏輯
+    // ==========================================
     const DEFAULT_STOCKS = ["2330.TW", "2454.TW", "NVDA"];
 
     function getStockListFromURL() {
@@ -73,7 +94,6 @@
 
     async function fetchStockFromBackend(symbol) {
       try {
-        // 關鍵：呼叫我們自己寫的 Vercel 後端 API
         const response = await fetch(`/api/stock?symbol=${symbol}`);
         if (!response.ok) throw new Error('後端回應錯誤');
         const data = await response.json();
@@ -119,7 +139,7 @@
 
     window.onload = () => {
       loadAllStocks();
-      setInterval(loadAllStocks, 3 * 60 * 1000);
+      setInterval(loadAllStocks, 3 * 60 * 1000); // 每 3 分鐘自動更新一次
     };
   </script>
 </body>
