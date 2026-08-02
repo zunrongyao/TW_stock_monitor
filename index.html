@@ -257,14 +257,15 @@
     <button class="header-btn" onclick="openSettings()">⚙️ 設定 (Settings)</button>
   </div>
 
-  <!-- Market Tabs Switcher (TW / US) -->
+  <!-- Market Tabs Switcher (TW / US / MISC) -->
   <div class="tab-bar">
     <button id="tab-tw" class="tab-btn active" onclick="switchMarket('TW')">🇹🇼 台股 (TW)</button>
     <button id="tab-us" class="tab-btn" onclick="switchMarket('US')">🇺🇸 美股 (US)</button>
+    <button id="tab-misc" class="tab-btn" onclick="switchMarket('MISC')">📊 綜合 (MISC)</button>
   </div>
 
   <!-- Indices Compact Banner (TW or US) -->
-  <div class="indices-banner">
+  <div class="indices-banner" id="indices-banner">
     <div class="index-card" id="idx-1">
       <div class="index-name">加權指數 (TAIEX)</div>
       <div class="index-price">--.--</div>
@@ -277,7 +278,7 @@
     </div>
   </div>
 
-  <!-- Individual Stock Watch List -->
+  <!-- Individual Stock Watch List / MISC Container -->
   <div id="dashboard-content">
     <div class="loading">📊 載入中...</div>
   </div>
@@ -300,7 +301,7 @@
       <label class="modal-label">美股代號 (代號逗號分隔)：</label>
       <input type="text" id="us-stocks-input" class="modal-input" placeholder="例如: AAPL, NVDA, TSLA, MSFT, GOOGL">
 
-      <p style="font-size: 12px; color: #555; margin-top: 4px;">儲存後可在頂部切換台股/美股頁籤。</p>
+      <p style="font-size: 12px; color: #555; margin-top: 4px;">儲存後可在頂部切換頁籤。</p>
       
       <div class="modal-actions">
         <button class="btn btn-cancel" onclick="closeSettings()">取消</button>
@@ -310,7 +311,7 @@
   </div>
 
   <script>
-    // Current Market Tab ('TW' or 'US')
+    // Current Market Tab ('TW', 'US', 'MISC')
     let currentMarket = 'TW';
 
     // Defaults
@@ -336,6 +337,10 @@
 
       document.getElementById('tab-tw').classList.toggle('active', market === 'TW');
       document.getElementById('tab-us').classList.toggle('active', market === 'US');
+      document.getElementById('tab-misc').classList.toggle('active', market === 'MISC');
+
+      const banner = document.getElementById('indices-banner');
+      if (banner) banner.style.display = (market === 'MISC') ? 'none' : 'flex';
 
       loadAllData();
     }
@@ -631,8 +636,52 @@
       document.getElementById(containerId).innerHTML = svg;
     }
 
+    async function loadMiscPage() {
+      const container = document.getElementById('dashboard-content');
+      container.innerHTML = '<div class="loading">📊 載入大盤融資與市場資訊中...</div>';
+
+      const data = await fetchSymbol('MISC');
+      if (!data || data.error) {
+        container.innerHTML = '<div style="text-align:center; padding:30px; font-size:18px;">無法取得市場資訊</div>';
+        return;
+      }
+
+      container.innerHTML = `
+        <div style="border: 3px solid #000; border-radius: 8px; padding: 14px; background: #fff; margin-bottom: 12px;">
+          <div style="font-size: 20px; font-weight: bold; border-bottom: 2px solid #000; padding-bottom: 6px; margin-bottom: 10px; display:flex; justify-space-between;">
+            <span>🇹🇼 台股大盤融資統計</span>
+            <span style="font-size:14px; font-weight:normal; align-self:flex-end;">${data.marginDate}</span>
+          </div>
+
+          <div style="display:flex; justify-content:space-between; margin-bottom: 12px;">
+            <div>
+              <div style="font-size: 14px; font-weight:bold;">加權指數 (TAIEX)</div>
+              <div style="font-size: 28px; font-weight:bold;">${data.taiexPrice}</div>
+              <div style="font-size: 14px; font-weight:bold;">${data.taiexChange}</div>
+            </div>
+            <div style="text-align:right;">
+              <div style="font-size: 14px; font-weight:bold;">全市場融資餘額</div>
+              <div style="font-size: 28px; font-weight:bold;">${data.marginBalance} 億</div>
+              <div style="font-size: 14px; font-weight:bold;">單日變動: ${data.marginChange} 億</div>
+            </div>
+          </div>
+
+          <div style="border-top: 1px dashed #000; padding-top: 10px; font-size: 13px; line-height: 1.5; background: #fdfdfd; padding: 10px; border-radius: 4px;">
+            <div style="font-weight:bold; font-size:14px; margin-bottom:4px;">💡 融資維護率參考觀念：</div>
+            • <b>大盤安全線 (> 160%)</b>：多頭格局，市場槓桿健全。<br>
+            • <b>警戒區 (< 140%)</b>：散戶斷頭壓力漸增。<br>
+            • <b>追繳斷頭區 (< 130%)</b>：引發融資停損斷頭潮與大盤落底訊號。
+          </div>
+        </div>
+      `;
+    }
+
     async function loadAllData() {
-      await Promise.all([loadIndices(), loadStockCards()]);
+      if (currentMarket === 'MISC') {
+        await loadMiscPage();
+      } else {
+        await Promise.all([loadIndices(), loadStockCards()]);
+      }
       
       const now = new Date();
       const options = { timeZone: 'Asia/Taipei', hour: '2-digit', minute: '2-digit', hour12: false };

@@ -29,11 +29,77 @@ async function getStockChineseName(symbol, meta) {
   return meta?.shortName || meta?.longName || symbol;
 }
 
+async function fetchMiscData() {
+  try {
+    const [marginRes, taiexRes] = await Promise.all([
+      fetch('https://www.twse.com.tw/exchangeReport/MI_MARGN?response=json&selectType=MS', {
+        headers: { 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64)' }
+      }),
+      fetch('https://query1.finance.yahoo.com/v8/finance/chart/%5ETWII?interval=1d&range=1d', {
+        headers: { 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64)' }
+      })
+    ]);
+
+    let marginDate = '--';
+    let marginBalanceStr = '--';
+    let marginBalanceNum = 0;
+    let marginChangeStr = '--';
+
+    if (marginRes.ok) {
+      const marginData = await marginRes.json();
+      if (marginData.tables && marginData.tables[0] && marginData.tables[0].data) {
+        marginDate = marginData.tables[0].title || '--';
+        const marginRow = marginData.tables[0].data[2]; // 融資金額(仟元)
+        if (marginRow) {
+          const todayRaw = parseFloat(marginRow[5].replace(/,/g, ''));
+          const prevRaw = parseFloat(marginRow[4].replace(/,/g, ''));
+          marginBalanceNum = (todayRaw * 1000) / 100000000;
+          marginBalanceStr = marginBalanceNum.toFixed(2);
+
+          const diff = ((todayRaw - prevRaw) * 1000) / 100000000;
+          const sign = diff >= 0 ? '+' : '';
+          marginChangeStr = `${sign}${diff.toFixed(2)}`;
+        }
+      }
+    }
+
+    let taiexPrice = '--';
+    let taiexChange = '--';
+    if (taiexRes.ok) {
+      const taiexData = await taiexRes.json();
+      const meta = taiexData.chart.result[0].meta;
+      taiexPrice = meta.regularMarketPrice ? meta.regularMarketPrice.toFixed(2) : '--';
+      if (meta.regularMarketPrice && meta.chartPreviousClose) {
+        const diff = meta.regularMarketPrice - meta.chartPreviousClose;
+        const sign = diff >= 0 ? '+' : '';
+        taiexChange = `${sign}${diff.toFixed(2)}`;
+      }
+    }
+
+    return {
+      marginDate,
+      marginBalance: marginBalanceStr,
+      marginChange: marginChangeStr,
+      taiexPrice,
+      taiexChange
+    };
+  } catch (e) {
+    console.error('Misc data fetch error:', e);
+    return null;
+  }
+}
+
 export default async function handler(req, res) {
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'GET');
 
   let { symbol } = req.query;
+  
+  if (symbol && symbol.toUpperCase() === 'MISC') {
+    const miscData = await fetchMiscData();
+    return res.status(200).json(miscData || { error: 'Failed to fetch MISC data' });
+  }
+
   if (!symbol) {
     return res.status(400).json({ error: 'Missing symbol' });
   }
