@@ -141,7 +141,7 @@ export default async function handler(req, res) {
       const quotes = result.indicators.quote[0].close || [];
 
       chartData = timestamps.map((t, idx) => ({
-        time: new Date(t * 1000).toLocaleTimeString('zh-TW', { hour: '2-digit', minute: '2-digit', hour12: false }),
+        time: new Date(t * 1000).toLocaleTimeString('zh-TW', { timeZone: 'Asia/Taipei', hour: '2-digit', minute: '2-digit', hour12: false }),
         price: quotes[idx] !== null && quotes[idx] !== undefined ? parseFloat(quotes[idx].toFixed(2)) : null
       })).filter(item => item.price !== null);
     }

@@ -635,8 +635,8 @@
       await Promise.all([loadIndices(), loadStockCards()]);
       
       const now = new Date();
-      document.getElementById('last-update').innerText = 
-        now.getHours().toString().padStart(2, '0') + ':' + now.getMinutes().toString().padStart(2, '0');
+      const options = { timeZone: 'Asia/Taipei', hour: '2-digit', minute: '2-digit', hour12: false };
+      document.getElementById('last-update').innerText = new Intl.DateTimeFormat('zh-TW', options).format(now);
     }
 
     window.onload = () => {
