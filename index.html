@@ -688,9 +688,42 @@
       document.getElementById('last-update').innerText = new Intl.DateTimeFormat('zh-TW', options).format(now);
     }
 
+    // Smart Auto-Refresh Timer
+    function getNextRefreshInterval() {
+      // Calculate current time in Asia/Taipei timezone
+      const nowTaipei = new Date(new Date().toLocaleString("en-US", { timeZone: "Asia/Taipei" }));
+      const day = nowTaipei.getDay(); // 0 = Sun, 1 = Mon, ..., 6 = Sat
+      const hours = nowTaipei.getHours();
+      const mins = nowTaipei.getMinutes();
+      const totalMins = hours * 60 + mins;
+
+      // TW Market Trading Hours: Mon-Fri 09:00 (540m) to 13:35 (815m)
+      const isTWTradingHours = (day >= 1 && day <= 5) && (totalMins >= 540 && totalMins <= 815);
+
+      // US Market Trading Hours (Taiwan Time): Mon night to Sat morning ~21:30 (1290m) - 04:00 (240m)
+      const isUSTradingHours = (totalMins >= 1290 || totalMins <= 240);
+
+      // If active trading hours in either TW or US, refresh every 5 minutes (300,000ms)
+      if (currentMarket === 'TW' && isTWTradingHours) return 5 * 60 * 1000;
+      if (currentMarket === 'US' && isUSTradingHours) return 5 * 60 * 1000;
+
+      // Off-market hours: refresh every 10 minutes to save power
+      return 10 * 60 * 1000;
+    }
+
+    let refreshTimer = null;
+    function scheduleAutoRefresh() {
+      if (refreshTimer) clearTimeout(refreshTimer);
+      const interval = getNextRefreshInterval();
+      refreshTimer = setTimeout(async () => {
+        await loadAllData();
+        scheduleAutoRefresh();
+      }, interval);
+    }
+
     window.onload = () => {
       loadAllData();
-      setInterval(loadAllData, 3 * 60 * 1000); // 3-min auto refresh
+      scheduleAutoRefresh();
     };
   </script>
 
