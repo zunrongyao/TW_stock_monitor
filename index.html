@@ -469,6 +469,11 @@
         const stockName = (data.name && data.name !== data.symbol) ? data.name : '';
         const titleText = stockName ? `${stockCode} ${stockName}` : stockCode;
 
+        let extHtml = '';
+        if (data.extendedMarket) {
+          extHtml = `<span style="font-size: 13px; font-weight: normal; margin-right: 8px;">${data.extendedMarket.label}: ${data.extendedMarket.price} (${data.extendedMarket.changePercent})</span>`;
+        }
+
         return `
           <div class="stock-card" onclick="openDetailModal('${symbol}')" style="cursor:pointer;">
             <div class="stock-main">
@@ -476,6 +481,7 @@
               <span class="price">${data.price}</span>
             </div>
             <div class="stock-sub">
+              ${extHtml}
               <span>${arrow}${data.change} (${data.changePercent}%)</span>
             </div>
           </div>

@@ -45,7 +45,7 @@ export default async function handler(req, res) {
 
   try {
     const encodedSymbol = encodeURIComponent(symbol);
-    const targetUrl = `https://query1.finance.yahoo.com/v8/finance/chart/${encodedSymbol}?interval=1m&range=1d`;
+    const targetUrl = `https://query1.finance.yahoo.com/v8/finance/chart/${encodedSymbol}?interval=1m&range=1d&includePrePost=true`;
     
     const response = await fetch(targetUrl, {
       headers: {
@@ -85,6 +85,48 @@ export default async function handler(req, res) {
       changePercentStr = ((diff / previousClose) * 100).toFixed(2);
     }
 
+    // Extended Market (Pre/Post Market) extraction
+    let extendedMarket = null;
+    if (meta.hasPrePostMarketData && meta.currentTradingPeriod && result.timestamp && result.indicators && result.indicators.quote[0]) {
+      const timestamps = result.timestamp;
+      const quotes = result.indicators.quote[0].close;
+      const regStart = meta.currentTradingPeriod.regular.start;
+      const regEnd = meta.currentTradingPeriod.regular.end;
+      const nowTs = Math.floor(Date.now() / 1000);
+
+      let extType = null;
+      let extPrice = null;
+
+      // Find latest valid pre or post quote
+      for (let i = timestamps.length - 1; i >= 0; i--) {
+        const t = timestamps[i];
+        const q = quotes[i];
+        if (q !== null && q !== undefined) {
+          if (t < regStart) {
+            extType = '盤前 (Pre)';
+            extPrice = q;
+            break;
+          } else if (t > regEnd) {
+            extType = '盤後 (Post)';
+            extPrice = q;
+            break;
+          }
+        }
+      }
+
+      if (extPrice && currentPrice) {
+        const extDiff = extPrice - currentPrice;
+        const extPercent = (extDiff / currentPrice) * 100;
+        const extSign = extDiff >= 0 ? '+' : '';
+        extendedMarket = {
+          label: extType,
+          price: extPrice.toFixed(2),
+          change: `${extSign}${extDiff.toFixed(2)}`,
+          changePercent: `${extSign}${extPercent.toFixed(2)}%`
+        };
+      }
+    }
+
     // Friendly display symbol & Chinese Name
     let displayName = symbol.toUpperCase();
     if (symbol === '^TWII') displayName = '加權指數';
@@ -97,9 +139,6 @@ export default async function handler(req, res) {
     if (result.timestamp && result.indicators && result.indicators.quote[0]) {
       const timestamps = result.timestamp;
       const quotes = result.indicators.quote[0].close || [];
-      const high = meta.regularMarketDayHigh || Math.max(...quotes.filter(Boolean));
-      const low = meta.regularMarketDayLow || Math.min(...quotes.filter(Boolean));
-      const open = meta.regularMarketOpen || quotes.find(Boolean);
 
       chartData = timestamps.map((t, idx) => ({
         time: new Date(t * 1000).toLocaleTimeString('zh-TW', { hour: '2-digit', minute: '2-digit', hour12: false }),
@@ -115,6 +154,7 @@ export default async function handler(req, res) {
       previousClose: prevStr,
       change: changeStr,
       changePercent: changePercentStr,
+      extendedMarket: extendedMarket,
       chart: chartData
     });
 
