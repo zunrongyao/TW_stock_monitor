@@ -40,38 +40,46 @@
       border-radius: 4px;
     }
 
-    /* Market Indices Banner (TAIEX & WTXP&) */
+    /* Market Indices Banner */
     .indices-banner {
       display: flex;
-      justify-content: space-between;
+      justify-content: space-around;
+      align-items: center;
       gap: 6px;
-      border-top: 3px solid #000;
-      border-bottom: 3px solid #000;
-      padding: 6px 0;
-      margin-bottom: 12px;
+      border-top: 2px solid #000;
+      border-bottom: 2px solid #000;
+      padding: 3px 6px;
+      margin-bottom: 8px;
       background: #f8f8f8;
+      font-size: 13px;
     }
 
     .index-card {
       flex: 1;
-      text-align: center;
-      border-right: 1px solid #000;
-      padding: 2px 4px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 1px 4px;
     }
 
-    .index-card:last-child {
+    .index-card:first-child {
       border-right: none;
+    }
+
+    .index-card:nth-child(2) {
+      border-left: 1px solid #000;
+      padding-left: 8px;
     }
 
     .index-name {
       font-size: 13px;
       font-weight: bold;
-      margin-bottom: 2px;
     }
 
     .index-price {
-      font-size: 18px;
+      font-size: 14px;
       font-weight: bold;
+      margin: 0 4px;
     }
 
     .index-change {
@@ -395,25 +403,21 @@
 
     // Load Top Indices based on current market
     async function loadIndices() {
-      let firstSymbol = '^TWII';
-      let secondSymbol = 'FITX.TWO';
-      let firstName = '加權指數 (TAIEX)';
-      let secondName = '臺指期 (WTXP&)';
+      const idx2 = document.getElementById('idx-2');
 
-      if (currentMarket === 'US') {
-        firstSymbol = '^GSPC';
-        secondSymbol = '^IXIC';
-        firstName = '標普 500 (S&P 500)';
-        secondName = '納斯達克 (Nasdaq)';
+      if (currentMarket === 'TW') {
+        if (idx2) idx2.style.display = 'none';
+        const taiexData = await fetchSymbol('^TWII');
+        updateIndexUI('idx-1', '加權指數 (TAIEX)', taiexData);
+      } else {
+        if (idx2) idx2.style.display = 'flex';
+        const [spData, nasdaqData] = await Promise.all([
+          fetchSymbol('^GSPC'),
+          fetchSymbol('^IXIC')
+        ]);
+        updateIndexUI('idx-1', 'S&P 500', spData);
+        updateIndexUI('idx-2', 'Nasdaq', nasdaqData);
       }
-
-      const [firstData, secondData] = await Promise.all([
-        fetchSymbol(firstSymbol),
-        fetchSymbol(secondSymbol)
-      ]);
-
-      updateIndexUI('idx-1', firstName, firstData);
-      updateIndexUI('idx-2', secondName, secondData);
     }
 
     function updateIndexUI(elementId, label, data) {
