@@ -292,10 +292,14 @@
         const isPositive = parseFloat(data.change) >= 0;
         const arrow = isPositive ? "▲ +" : "▼ ";
 
+        const stockCode = symbol.replace('.TW','').replace('.TWO','');
+        const stockName = (data.name && data.name !== data.symbol) ? data.name : '';
+        const titleText = stockName ? `${stockCode} ${stockName}` : stockCode;
+
         return `
           <div class="stock-card">
             <div class="stock-main">
-              <span class="symbol">${data.symbol.replace('.TW','').replace('.TWO','')}</span>
+              <span class="symbol">${titleText}</span>
               <span class="price">${data.price}</span>
             </div>
             <div class="stock-sub">

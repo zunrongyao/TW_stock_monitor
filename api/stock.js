@@ -57,10 +57,14 @@ export default async function handler(req, res) {
     // Friendly display name
     let displayName = symbol.toUpperCase();
     if (symbol === '^TWII') displayName = '加權指數';
-    if (symbol === 'FITX.TWO' || symbol.toUpperCase() === 'WTXP&') displayName = '臺指期';
+    else if (symbol === 'FITX.TWO' || symbol.toUpperCase() === 'WTXP&') displayName = '臺指期';
+
+    // Chinese/Short name from Yahoo metadata if available
+    const name = meta.shortName || meta.longName || displayName;
 
     return res.status(200).json({
       symbol: displayName,
+      name: name,
       price: priceStr,
       previousClose: prevStr,
       change: changeStr,
