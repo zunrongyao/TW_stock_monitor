@@ -1,0 +1,187 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Kindle Stock Dashboard</title>
+  <style>
+    /* 專為 Kindle E-Ink 電子紙設計的黑白高對比排版 */
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: Arial, "Helvetica Neue", sans-serif;
+      background-color: #ffffff;
+      color: #000000;
+      padding: 15px;
+    }
+    
+    /* 頂部狀態列 */
+    .header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      border-bottom: 3px solid #000000;
+      padding-bottom: 8px;
+      margin-bottom: 15px;
+      font-size: 16px;
+      font-weight: bold;
+    }
+
+    /* 股票卡片 */
+    .stock-card {
+      border: 2px solid #000000;
+      border-radius: 6px;
+      padding: 12px 15px;
+      margin-bottom: 12px;
+      background: #ffffff;
+    }
+
+    .stock-main {
+      display: flex;
+      justify-content: space-between;
+      align-items: baseline;
+    }
+
+    .symbol {
+      font-size: 26px;
+      font-weight: bold;
+    }
+
+    .price {
+      font-size: 38px;
+      font-weight: bold;
+    }
+
+    .stock-sub {
+      display: flex;
+      justify-content: space-between;
+      margin-top: 5px;
+      font-size: 18px;
+    }
+
+    .change {
+      font-weight: bold;
+    }
+
+    /* E-Ink 標示漲跌（不靠顏色，靠黑底白字或圖示） */
+    .up { content: "▲ "; }
+    .down { content: "▼ "; }
+
+    .loading {
+      text-align: center;
+      font-size: 22px;
+      margin-top: 50px;
+    }
+  </style>
+</head>
+<body>
+
+  <div class="header">
+    <span id="net-status">🟢 已連線</span>
+    <span>更新時間: <span id="last-update">--:--</span></span>
+  </div>
+
+  <div id="dashboard-content">
+    <div class="loading">📊 正在載入最新股價數據...</div>
+  </div>
+
+  <script>
+    // 1. 預設顯示的股票（若網址無參數時使用）
+    const DEFAULT_STOCKS = ["2330.TW", "2454.TW", "NVDA"];
+
+    // 2. 從網址取得 ?stocks=2330.TW,NVDA 參數
+    function getStockListFromURL() {
+      const params = new URLSearchParams(window.location.search);
+      const stocksParam = params.get('stocks');
+      if (stocksParam) {
+        return stocksParam.split(',').map(s => s.trim());
+      }
+      return DEFAULT_STOCKS;
+    }
+
+    // 3. 呼叫免費公開 API (Yahoo Finance 轉接服務) 抓取股價
+    async function fetchStockPrices(symbols) {
+      const container = document.getElementById('dashboard-content');
+      let htmlContent = '';
+
+      for (const symbol of symbols) {
+        try {
+          // 使用第三方開放 API 抓取 Yahoo Finance 報價
+          const res = await fetch(`https://query1.finance.yahoo.com/v8/finance/chart/${symbol}?interval=1m&range=1d`);
+          const data = await res.json();
+          const meta = data.chart.result[0].meta;
+
+          const currentPrice = meta.regularMarketPrice.toFixed(2);
+          const previousClose = meta.chartPreviousClose.toFixed(2);
+          const change = (currentPrice - previousClose).toFixed(2);
+          const changePercent = ((change / previousClose) * 100).toFixed(2);
+
+          const isPositive = change >= 0;
+          const arrow = isPositive ? "▲ +" : "▼ ";
+
+          htmlContent += `
+            <div class="stock-card">
+              <div class="stock-main">
+                <span class="symbol">${symbol}</span>
+                <span class="price">${currentPrice}</span>
+              </div>
+              <div class="stock-sub">
+                <span>昨日收盤: ${previousClose}</span>
+                <span class="change">${arrow}${change} (${changePercent}%)</span>
+              </div>
+            </div>
+          `;
+        } catch (error) {
+          console.error(`無法讀取 ${symbol}:`, error);
+          htmlContent += `
+            <div class="stock-card">
+              <div class="stock-main">
+                <span class="symbol">${symbol}</span>
+                <span class="price">--.--</span>
+              </div>
+              <div class="stock-sub">
+                <span>讀取失敗</span>
+              </div>
+            </div>
+          `;
+        }
+      }
+
+      container.innerHTML = htmlContent;
+      updateHeaderStatus();
+    }
+
+    // 4. 更新頂部時間與網路狀態
+    function updateHeaderStatus() {
+      const now = new Date();
+      const timeStr = now.getHours().toString().padStart(2, '0') + ':' + 
+                      now.getMinutes().toString().padStart(2, '0');
+      document.getElementById('last-update').innerText = timeStr;
+
+      if (navigator.onLine) {
+        document.getElementById('net-status').innerText = "🟢 已連線";
+      } else {
+        document.getElementById('net-status').innerText = "🔴 斷線 (暫停)";
+      }
+    }
+
+    // 5. 智慧刷新邏輯 (每 5 分鐘自動 reload 頁面)
+    function startAutoRefresh() {
+      setInterval(() => {
+        window.location.reload();
+      }, 5 * 60 * 1000); // 5 分鐘 = 300,000 毫秒
+    }
+
+    // 當手機熱點重連時，自動觸發重整
+    window.addEventListener('online', () => {
+      window.location.reload();
+    });
+
+    // 頁面載入後自動執行
+    window.onload = () => {
+      const stockList = getStockListFromURL();
+      fetchStockPrices(stockList);
+      startAutoRefresh();
+    };
+  </script>
+</body>
+</html>
