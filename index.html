@@ -81,10 +81,10 @@
 
     /* Individual Stock Cards */
     .stock-card {
-      border: 3px solid #000000;
-      border-radius: 8px;
-      padding: 12px 15px;
-      margin-bottom: 10px;
+      border: 2px solid #000000;
+      border-radius: 6px;
+      padding: 6px 10px;
+      margin-bottom: 5px;
       background: #ffffff;
     }
 
@@ -94,14 +94,14 @@
       align-items: center;
     }
 
-    .symbol { font-size: 28px; font-weight: bold; }
-    .price { font-size: 40px; font-weight: bold; }
+    .symbol { font-size: 20px; font-weight: bold; }
+    .price { font-size: 26px; font-weight: bold; }
 
     .stock-sub {
       display: flex;
-      justify-content: space-between;
-      margin-top: 4px;
-      font-size: 18px;
+      justify-content: flex-end;
+      margin-top: 1px;
+      font-size: 15px;
       font-weight: bold;
     }
 
@@ -132,12 +132,19 @@
       padding-bottom: 5px;
     }
 
+    .modal-label {
+      font-size: 15px;
+      font-weight: bold;
+      margin-top: 10px;
+      display: block;
+    }
+
     .modal-input {
       width: 100%;
-      padding: 10px;
-      font-size: 18px;
+      padding: 8px;
+      font-size: 16px;
       border: 2px solid #000;
-      margin: 10px 0;
+      margin: 4px 0 8px 0;
       font-weight: bold;
     }
 
@@ -190,9 +197,14 @@
   <div id="settings-modal" class="modal-overlay">
     <div class="modal-box">
       <div class="modal-title">⚙️ 台股自選清單設定</div>
-      <p style="font-size: 15px;">請輸入個股代號（用逗號 `,` 分隔）：</p>
-      <input type="text" id="stocks-input" class="modal-input" placeholder="例如: 2330.TW, 2317.TW, 2454.TW">
-      <p style="font-size: 13px; color: #333;">上市加 `.TW` (如 2330.TW)，上櫃加 `.TWO` (如 8069.TWO)。</p>
+      
+      <label class="modal-label">上市股票 (代號逗號分隔，免輸入.TW)：</label>
+      <input type="text" id="tw-stocks-input" class="modal-input" placeholder="例如: 2330, 2317, 2454">
+      
+      <label class="modal-label">上櫃股票 (代號逗號分隔，免輸入.TWO)：</label>
+      <input type="text" id="two-stocks-input" class="modal-input" placeholder="例如: 8069, 3293">
+
+      <p style="font-size: 12px; color: #555; margin-top: 4px;">直接輸入數字代號即可，系統將自動套用市場分類。</p>
       
       <div class="modal-actions">
         <button class="btn btn-cancel" onclick="closeSettings()">取消</button>
@@ -202,22 +214,35 @@
   </div>
 
   <script>
-    // Default TW stocks ONLY (No US stocks)
+    // Default TW stocks ONLY
     const DEFAULT_STOCKS = ["2330.TW", "2317.TW", "2454.TW"];
 
     function getStockList() {
       const params = new URLSearchParams(window.location.search);
       const urlStocks = params.get('stocks');
-      if (urlStocks) return urlStocks.split(',').map(s => s.trim());
+      if (urlStocks) return urlStocks.split(',').map(s => s.trim()).filter(Boolean);
 
       const savedStocks = localStorage.getItem('kindle_stock_list');
-      if (savedStocks) return savedStocks.split(',').map(s => s.trim());
+      if (savedStocks) return savedStocks.split(',').map(s => s.trim()).filter(Boolean);
 
       return DEFAULT_STOCKS;
     }
 
     function openSettings() {
-      document.getElementById('stocks-input').value = getStockList().join(', ');
+      const list = getStockList();
+      const twList = [];
+      const twoList = [];
+
+      list.forEach(item => {
+        if (item.endsWith('.TWO')) {
+          twoList.push(item.replace('.TWO', ''));
+        } else {
+          twList.push(item.replace('.TW', ''));
+        }
+      });
+
+      document.getElementById('tw-stocks-input').value = twList.join(', ');
+      document.getElementById('two-stocks-input').value = twoList.join(', ');
       document.getElementById('settings-modal').style.display = 'block';
     }
 
@@ -226,9 +251,16 @@
     }
 
     function saveSettings() {
-      const inputValue = document.getElementById('stocks-input').value;
-      if (inputValue.trim()) {
-        localStorage.setItem('kindle_stock_list', inputValue.trim());
+      const twInput = document.getElementById('tw-stocks-input').value;
+      const twoInput = document.getElementById('two-stocks-input').value;
+
+      const twItems = twInput.split(',').map(s => s.trim()).filter(Boolean).map(code => code.includes('.') ? code : `${code}.TW`);
+      const twoItems = twoInput.split(',').map(s => s.trim()).filter(Boolean).map(code => code.includes('.') ? code : `${code}.TWO`);
+
+      const fullList = [...twItems, ...twoItems];
+
+      if (fullList.length > 0) {
+        localStorage.setItem('kindle_stock_list', fullList.join(', '));
         closeSettings();
         loadAllData();
       }
@@ -278,12 +310,14 @@
       
       const cards = await Promise.all(symbols.map(async (symbol) => {
         const data = await fetchSymbol(symbol);
+        const stockCode = symbol.replace('.TW','').replace('.TWO','');
+        
         if (!data || data.price === '--') {
           return `
             <div class="stock-card">
               <div class="stock-main">
-                <span class="symbol">${symbol.replace('.TW','').replace('.TWO','')}</span>
-                <span class="price" style="font-size:24px;">休市 / 無資料</span>
+                <span class="symbol">${stockCode}</span>
+                <span class="price" style="font-size:20px;">休市 / 無資料</span>
               </div>
             </div>
           `;
@@ -291,8 +325,6 @@
 
         const isPositive = parseFloat(data.change) >= 0;
         const arrow = isPositive ? "▲ +" : "▼ ";
-
-        const stockCode = symbol.replace('.TW','').replace('.TWO','');
         const stockName = (data.name && data.name !== data.symbol) ? data.name : '';
         const titleText = stockName ? `${stockCode} ${stockName}` : stockCode;
 
@@ -303,7 +335,6 @@
               <span class="price">${data.price}</span>
             </div>
             <div class="stock-sub">
-              <span>昨收: ${data.previousClose}</span>
               <span>${arrow}${data.change} (${data.changePercent}%)</span>
             </div>
           </div>
