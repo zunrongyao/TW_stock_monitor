@@ -63,12 +63,16 @@ async function fetchMiscData() {
       }
     }
 
+    let taiexPriceNum = 0;
     let taiexPrice = '--';
     let taiexChange = '--';
     if (taiexRes.ok) {
       const taiexData = await taiexRes.json();
       const meta = taiexData.chart.result[0].meta;
-      taiexPrice = meta.regularMarketPrice ? meta.regularMarketPrice.toFixed(2) : '--';
+      if (meta.regularMarketPrice) {
+        taiexPriceNum = meta.regularMarketPrice;
+        taiexPrice = taiexPriceNum.toFixed(2);
+      }
       if (meta.regularMarketPrice && meta.chartPreviousClose) {
         const diff = meta.regularMarketPrice - meta.chartPreviousClose;
         const sign = diff >= 0 ? '+' : '';
@@ -76,12 +80,27 @@ async function fetchMiscData() {
       }
     }
 
+    // Estimate Market Margin Maintenance Ratio (整戶融資維持率)
+    let maintenanceRatio = '--';
+    let ratioStatus = '正常';
+    if (taiexPriceNum > 0 && marginBalanceNum > 0) {
+      // Baseline calibration: TAIEX 22,000 pts with ~3,100 億 margin balance equates to ~166% avg maintenance ratio
+      const calculatedRatio = 166 * (taiexPriceNum / 22000) * (3100 / marginBalanceNum);
+      maintenanceRatio = `${calculatedRatio.toFixed(1)}%`;
+
+      if (calculatedRatio >= 160) ratioStatus = '🟢 安全多頭';
+      else if (calculatedRatio >= 140) ratioStatus = '🟡 警戒區';
+      else ratioStatus = '🔴 斷頭危險區';
+    }
+
     return {
       marginDate,
       marginBalance: marginBalanceStr,
       marginChange: marginChangeStr,
       taiexPrice,
-      taiexChange
+      taiexChange,
+      maintenanceRatio,
+      ratioStatus
     };
   } catch (e) {
     console.error('Misc data fetch error:', e);

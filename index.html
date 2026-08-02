@@ -648,28 +648,35 @@
 
       container.innerHTML = `
         <div style="border: 3px solid #000; border-radius: 8px; padding: 14px; background: #fff; margin-bottom: 12px;">
-          <div style="font-size: 20px; font-weight: bold; border-bottom: 2px solid #000; padding-bottom: 6px; margin-bottom: 10px; display:flex; justify-space-between;">
-            <span>🇹🇼 台股大盤融資統計</span>
-            <span style="font-size:14px; font-weight:normal; align-self:flex-end;">${data.marginDate}</span>
+          <div style="font-size: 20px; font-weight: bold; border-bottom: 2px solid #000; padding-bottom: 6px; margin-bottom: 12px; display:flex; justify-content:space-between; align-items:center;">
+            <span>🇹🇼 台股融資與維持率統計</span>
+            <span style="font-size:13px; font-weight:normal;">${data.marginDate}</span>
           </div>
 
-          <div style="display:flex; justify-content:space-between; margin-bottom: 12px;">
+          <!-- Highlight: Maintenance Ratio % -->
+          <div style="border: 2px solid #000; border-radius: 6px; padding: 12px; text-align: center; background: #f4f4f4; margin-bottom: 12px;">
+            <div style="font-size: 15px; font-weight: bold;">整戶融資維持率 (估計)</div>
+            <div style="font-size: 42px; font-weight: bold; margin: 4px 0;">${data.maintenanceRatio}</div>
+            <div style="font-size: 16px; font-weight: bold;">狀態: ${data.ratioStatus}</div>
+          </div>
+
+          <div style="display:flex; justify-content:space-between; margin-bottom: 12px; border-top: 1px stroke #000; padding-top: 8px;">
             <div>
               <div style="font-size: 14px; font-weight:bold;">加權指數 (TAIEX)</div>
-              <div style="font-size: 28px; font-weight:bold;">${data.taiexPrice}</div>
-              <div style="font-size: 14px; font-weight:bold;">${data.taiexChange}</div>
+              <div style="font-size: 24px; font-weight:bold;">${data.taiexPrice}</div>
+              <div style="font-size: 13px; font-weight:bold;">${data.taiexChange}</div>
             </div>
             <div style="text-align:right;">
               <div style="font-size: 14px; font-weight:bold;">全市場融資餘額</div>
-              <div style="font-size: 28px; font-weight:bold;">${data.marginBalance} 億</div>
-              <div style="font-size: 14px; font-weight:bold;">單日變動: ${data.marginChange} 億</div>
+              <div style="font-size: 24px; font-weight:bold;">${data.marginBalance} 億</div>
+              <div style="font-size: 13px; font-weight:bold;">單日變動: ${data.marginChange} 億</div>
             </div>
           </div>
 
           <div style="border-top: 1px dashed #000; padding-top: 10px; font-size: 13px; line-height: 1.5; background: #fdfdfd; padding: 10px; border-radius: 4px;">
             <div style="font-weight:bold; font-size:14px; margin-bottom:4px;">💡 融資維護率參考觀念：</div>
             • <b>大盤安全線 (> 160%)</b>：多頭格局，市場槓桿健全。<br>
-            • <b>警戒區 (< 140%)</b>：散戶斷頭壓力漸增。<br>
+            • <b>警戒區 (130% ~ 140%)</b>：散戶追繳與斷頭壓力漸增。<br>
             • <b>追繳斷頭區 (< 130%)</b>：引發融資停損斷頭潮與大盤落底訊號。
           </div>
         </div>
